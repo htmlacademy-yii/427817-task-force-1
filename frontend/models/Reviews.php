@@ -2,20 +2,17 @@
 
 namespace frontend\models;
 
-use Yii;
-
 /**
  * This is the model class for table "reviews".
  *
- * @property int $id
- * @property int $task_id
- * @property int $user_id
+ * @property int    $id
+ * @property int    $task_id
+ * @property int    $user_id
  * @property string $dt_add
- * @property int $value
+ * @property int    $value
  * @property string $comment
- *
- * @property Tasks $task
- * @property Users $user
+ * @property Tasks  $task
+ * @property Users  $user
  */
 class Reviews extends \yii\db\ActiveRecord
 {

@@ -11,8 +11,12 @@ return [
     'id' => 'app-frontend',
     'basePath' => dirname(__DIR__),
     'bootstrap' => ['log'],
+    'timeZone' => 'Europe/Moscow',
     'controllerNamespace' => 'frontend\controllers',
     'components' => [
+        'formatter' => [
+            'defaultTimeZone' => 'Europe/Moscow',
+        ],
         'request' => [
             'csrfParam' => '_csrf-frontend',
         ],
@@ -43,8 +47,10 @@ return [
             'showScriptName' => false,
             'enableStrictParsing' => false,
             'rules' => [
-                '/task/view/<id:\d+>' => 'tasks/show',
                 '/' => 'tasks',
+                'tasks/view/<id:\d+>' => 'tasks/view',
+                'users/view/<id:\d+>' => 'users/view',
+                'users/index/<sort:\w+>' => 'users/index',
             ],
         ],
     ],

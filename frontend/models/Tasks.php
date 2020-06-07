@@ -31,6 +31,7 @@ namespace frontend\models;
 class Tasks extends \yii\db\ActiveRecord
 {
     const STATUS_NEW = 'new';
+    const STATUS_PROGRESS = 'in_progress';
 
     /**
      * {@inheritdoc}
@@ -84,11 +85,13 @@ class Tasks extends \yii\db\ActiveRecord
     }
 
     /**
-     * @return \yii\db\ActiveQuery
+     * получает список приложений.
+     *
+     * @return array
      */
     public function getAttachments()
     {
-        return $this->hasMany(Attachment::className(), ['task_id' => 'id']);
+        return $this->hasMany(Attachment::className(), ['task_id' => 'id'])->select('filename')->orderBy(['filename' => SORT_ASC])->column();
     }
 
     /**
@@ -105,6 +108,17 @@ class Tasks extends \yii\db\ActiveRecord
     public function getResponds()
     {
         return $this->hasMany(Responds::className(), ['task_id' => 'id']);
+    }
+
+    /**
+     * проверка наличия отклика.
+     * @param int $id id гостя
+     *
+     * @return bool
+     */
+    public function checkCandidate($id)
+    {
+        return $this->hasMany(Responds::className(), ['task_id' => 'id'])->where(['responds.author_id' => $id])->exists();
     }
 
     /**
@@ -148,11 +162,11 @@ class Tasks extends \yii\db\ActiveRecord
     }
 
     /**
-     * выборка свободных заданий дляя лэндинга
+     * выборка свободных заданий для лэндинга.
      *
      * @return \yii\db\ActiveQuery
      */
-    public function getRecent(int $amount)
+    public static function getRecent(int $amount)
     {
         return self::find()
             ->select('category_id, title, description, budget, dt_add')
@@ -161,14 +175,55 @@ class Tasks extends \yii\db\ActiveRecord
     }
 
     /**
-     * выборка свободных задани для главной страницы
+     * выборка свободных заданий для главной страницы.
      *
      * @return \yii\db\ActiveQuery
      */
-    public function getMainList()
+    public static function getMainList()
     {
         return self::find()
             ->select('tasks.id, category_id, title, description, budget, address, tasks.dt_add')
             ->where(['status' => self::STATUS_NEW])->andWhere('end_date >= now() OR end_date IS NULL');
+    }
+
+    /**
+     * выборка занятых исполнителей.
+     *
+     * @return \yii\db\ActiveQuery
+     */
+    public static function getBusyDoers()
+    {
+        return self::find()->select('executor_id')->where(['status' => self::STATUS_PROGRESS]);
+    }
+
+    /**
+     * является ли пользователь заказчиком
+     *
+     * @return boolean
+     */
+    public function isUserCustomer()
+    {
+        return $this->author_id === \Yii::$app->user->id;
+    }
+
+    /**
+     * получить список видимых пользователю откликов.
+     *
+     * @return array
+     */
+    public function getVisibleResponds()
+    {
+        return ($this->isUserCustomer() && $this->status === self::STATUS_NEW) ?
+            $this->hasMany(Responds::className(), ['task_id' => 'id'])->where(['responds.status' => self::STATUS_NEW]) : [];
+    }
+
+    /**
+     * контактное лицо в блоке сообщений на стр.просмотра.
+     *
+     * @return Users
+     */
+    public function getContact()
+    {
+        return ($this->isUserCustomer() && $this->status !== self::STATUS_NEW) ? $this->executor : $this->author;
     }
 }

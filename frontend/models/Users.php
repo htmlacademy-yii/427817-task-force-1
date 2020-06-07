@@ -2,6 +2,8 @@
 
 namespace frontend\models;
 
+use yii\db\Query;
+
 /**
  * This is the model class for table "users".
  *
@@ -15,7 +17,7 @@ namespace frontend\models;
  * @property int              $failures
  * @property int              $popularity
  * @property string           $dt_add
- * @property Accounts[]       $accounts
+ * @property Accounts         $account
  * @property Chats[]          $chats
  * @property Chats[]          $chats0
  * @property Favorites[]      $favorites
@@ -103,9 +105,9 @@ class Users extends \yii\db\ActiveRecord implements \yii\web\IdentityInterface
     /**
      * @return \yii\db\ActiveQuery
      */
-    public function getAccounts()
+    public function getAccount()
     {
-        return $this->hasMany(Accounts::className(), ['user_id' => 'id']);
+        return $this->hasOne(Accounts::className(), ['user_id' => 'id']);
     }
 
     /**
@@ -149,11 +151,13 @@ class Users extends \yii\db\ActiveRecord implements \yii\web\IdentityInterface
     }
 
     /**
-     * @return \yii\db\ActiveQuery
+     * подсчет кол-ва отзывов.
+     *
+     * @return int
      */
     public function getReviewsAmount()
     {
-        return $this->hasMany(Reviews::className(), ['user_id' => 'id'])->count();
+        return $this->hasMany(Reviews::className(), ['user_id' => 'id'])->count() ?? 0;
     }
 
     /**
@@ -195,4 +199,48 @@ class Users extends \yii\db\ActiveRecord implements \yii\web\IdentityInterface
     {
         return $this->hasOne(Cities::className(), ['id' => 'city_id']);
     }
+
+    /**
+     * проверка, является ли пользователь исполнителем
+     *
+     * @param int $id пользователя
+     *
+     * @return boolean
+     */
+    public static function isUserDoer($id)
+    {
+        return (new Query())->from('specialization s')->where(['s.user_id' => $id])->exists();
+    }
+
+    /**
+     * получить список всех исполнителей.
+     *
+     * @return \yii\db\ActiveQuery
+     */
+    public static function getDoersList()
+    {
+        return self::find()->innerJoinWith('specialization')->distinct();
+    }
+
+    /**
+     * получить список отмеченных категорий.
+     *
+     * @return array
+     */
+    public function getProfessions()
+    {
+        return (new Query())->select('c.title')->from('specialization s')->where(['s.user_id' => $this->id])
+            ->innerJoin('categories c', 's.category_id=c.id')->orderBy(['c.title' => SORT_ASC])->column();
+    }
+
+    /**
+     * пересчет рейтинга
+     *
+     * @return void
+     */
+    public function countRating()
+    {
+        $sumMarks = $this->hasMany(Reviews::className(), ['user_id' => 'id'])->sum('value');
+        $this->rating = $sumMarks/$this->reviewsAmount;
+        $this->save();}
 }
